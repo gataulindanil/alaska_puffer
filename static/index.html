@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Своя команда или подрядчик</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mu:#667085;--bd:#e3e6eb;--ac:#2f6fed;--in:#2f6fed;--co:#e8863a;--ok:#2a9d6a;--wa:#d99a1b;--bad:#d1453b}
+@media(prefers-color-scheme:dark){:root{--bg:#14171c;--card:#1c2027;--tx:#e8eaee;--mu:#98a1b0;--bd:#2b313b;--ac:#6b9bff;--in:#6b9bff;--co:#f0a15f}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 10px}.sub{color:var(--mu);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:14px}
+textarea,input,select{width:100%;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 10px}
+textarea{min-height:96px;resize:vertical}label{font-size:13px;color:var(--mu);display:block;margin:8px 0 3px}
+button{font:inherit;border:0;border-radius:8px;padding:9px 16px;cursor:pointer;background:var(--ac);color:#fff}
+button.ghost{background:transparent;color:var(--ac);border:1px solid var(--bd);padding:5px 10px;font-size:13px;margin:4px 6px 0 0}
+details summary{cursor:pointer;color:var(--ac);margin:10px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:720px){.two{grid-template-columns:1fr}}
+.big{font-size:24px;font-weight:650}.mu{color:var(--mu)}.small{font-size:13px}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;background:var(--bg);border:1px solid var(--bd)}
+.in{border-top:4px solid var(--in)}.co{border-top:4px solid var(--co)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd)}th{color:var(--mu);font-weight:500}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;display:inline-block;vertical-align:middle}
+ul{margin:6px 0 0;padding-left:18px}li{margin:3px 0}
+.meter{height:8px;background:var(--bd);border-radius:4px;overflow:hidden;margin-top:6px}.meter>i{display:block;height:100%}
+.rec{border-left:4px solid var(--ac)}.err{color:var(--bad)}
+.extra-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Своя команда или подрядчик</h1>
+  <p class="sub">Опишите ИТ-задачу: прототип оценит трудоёмкость, срок и стоимость для двух вариантов и покажет, на чём основан расчёт.</p>
+
+  <div class="card">
+    <h2>1. Описание задачи</h2>
+    <textarea id="desc" placeholder="Например: портал заявок с согласованием и интеграцией с 1С"></textarea>
+    <div id="examples"></div>
+    <details>
+      <summary>Допущения и параметры (можно менять)</summary>
+      <div class="grid" id="params"></div>
+      <h2 style="margin-top:14px">Дополнительные расходы</h2>
+      <div class="small mu">Сервер, лицензии, оборудование и т.п. Не входят в резерв на риски.</div>
+      <div id="extras"></div>
+      <button class="ghost" type="button" onclick="addExtra()">+ Добавить статью</button>
+    </details>
+    <button id="go" type="button" style="margin-top:8px">Рассчитать</button>
+    <span id="msg" class="err small"></span>
+  </div>
+
+  <div id="out" hidden>
+    <div class="two">
+      <div class="card in"><h2>Внутренняя команда</h2><div id="s-in"></div></div>
+      <div class="card co"><h2>Подрядчик</h2><div id="s-co"></div></div>
+    </div>
+    <div class="card rec"><h2>Вывод</h2><div id="rec"></div><div id="conf" style="margin-top:10px"></div></div>
+    <div class="card"><h2>Декомпозиция по этапам (ожидаемое значение)</h2><div id="stages"></div></div>
+    <div class="card"><h2>Использованные аналоги из истории</h2><div id="analogs"></div></div>
+    <div class="two">
+      <div class="card"><h2>Допущения</h2><ul id="assum"></ul></div>
+      <div class="card"><h2>Риски</h2><ul id="risks"></ul></div>
+    </div>
+  </div>
+
+  <div class="card"><h2>Качество данных</h2><div id="quality" class="small"></div></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const rub = n => Math.round(n).toLocaleString('ru-RU') + ' ₽';
+const mln = n => n >= 1e6 ? (n/1e6).toFixed(2).replace('.',',') + ' млн ₽' : rub(n);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LABELS = {complexity:'Множитель сложности',internal_rate:'Ставка, ₽/ч',internal_overhead_pct:'Накладные, %',risk_reserve_pct:'Резерв на риски, %',
+  internal_team:'Команда (внутри), чел.',internal_queue_days:'Ожидание старта (внутри), р.д.',contractor_team:'Команда подрядчика, чел.',
+  contractor_mobilization_days:'Старт подрядчика, р.д.',contractor_efficiency:'Доля часов подрядчика',coordination_pct:'Работы заказчика, %'};
+let meta;
+
+async function init(){
+  meta = await (await fetch('/api/meta')).json();
+  $('params').innerHTML = Object.entries(meta.defaults).map(([k,v]) =>
+    `<div><label for="p_${k}">${LABELS[k]||k}</label><input id="p_${k}" type="number" step="any" value="${v}"></div>`).join('');
+  $('examples').innerHTML = meta.examples.map((e,i)=>`<button class="ghost" type="button" data-i="${i}">Пример ${i+1}</button>`).join('');
+  $('examples').onclick = e => { if(e.target.dataset.i) $('desc').value = meta.examples[e.target.dataset.i]; };
+  const q = meta.quality, d = Object.entries(q.dropped).map(([k,v])=>`${esc(k)}: ${v}`).join('; ') || 'нет';
+  $('quality').innerHTML = `Строк в выгрузке: ${q.total_rows}, использовано: ${q.used_rows}, изменений (CR): ${q.projects}. Отсеяно — ${d}.
+    ${q.fact_plan_ratio ? `Среднее отношение факт/план: ${q.fact_plan_ratio}.` : ''}
+    <br><span class="mu">Демо-данные синтетические; замените файлы в папке data/ реальной выгрузкой и открытыми прайсами.</span>`;
+}
+
+function addExtra(){
+  const d = document.createElement('div'); d.className = 'extra-row';
+  d.innerHTML = `<input placeholder="Название" class="x-name"><input type="number" min="0" placeholder="Сумма, ₽" class="x-amt">
+    <select class="x-sc"><option value="both">Оба</option><option value="internal">Внутри</option><option value="contractor">Подрядчик</option></select>
+    <button class="ghost" type="button" onclick="this.parentNode.remove()">×</button>`;
+  $('extras').appendChild(d);
+}
+
+function scen(box, s, cls){
+  box.innerHTML = `
+    <div class="big">${mln(s.mid.cost)}</div>
+    <div class="mu small">диапазон ${mln(s.low.cost)} – ${mln(s.high.cost)}</div>
+    <div style="margin-top:8px">Срок: <b>${s.mid.days}</b> р.д. <span class="mu small">(${s.low.days}–${s.high.days}; ≈ ${Math.round(s.mid.days/5)} нед.)</span></div>
+    <div>Трудоёмкость: <b>${s.mid.hours}</b> ч <span class="mu small">(${s.low.hours}–${s.high.hours})</span></div>
+    ${s.mid.customer_hours!==undefined?`<div class="mu small">+ ${s.mid.customer_hours} ч работ заказчика (ТЗ, приёмка)</div>`:''}`;
+}
+
+$('go').onclick = async () => {
+  $('msg').textContent = '';
+  const body = {description: $('desc').value.trim(), extra_costs: []};
+  for (const k of Object.keys(meta.defaults)) { const v = parseFloat($('p_'+k).value); if(!isNaN(v)) body[k] = v; }
+  document.querySelectorAll('.extra-row').forEach(r => {
+    const name = r.querySelector('.x-name').value.trim(), amount = parseFloat(r.querySelector('.x-amt').value);
+    if (name && amount >= 0) body.extra_costs.push({name, amount, scenario: r.querySelector('.x-sc').value});
+  });
+  if (body.description.length < 10) { $('msg').textContent = 'Опишите задачу подробнее (минимум 10 символов).'; return; }
+  $('go').disabled = true;
+  try {
+    const r = await fetch('/api/estimate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    if (!r.ok) throw new Error('Ошибка ' + r.status + ': проверьте значения параметров');
+    render(await r.json());
+  } catch(e) { $('msg').textContent = e.message; }
+  $('go').disabled = false;
+};
+
+function render(d){
+  $('out').hidden = false;
+  scen($('s-in'), d.scenarios.internal); scen($('s-co'), d.scenarios.contractor);
+  $('rec').innerHTML = esc(d.recommendation.text);
+  const c = d.confidence, col = c.score >= .7 ? 'var(--ok)' : c.score >= .45 ? 'var(--wa)' : 'var(--bad)';
+  $('conf').innerHTML = `Достоверность: <b>${c.label}</b> <span class="mu small">(${c.score}; аналогов: ${c.analog_count}; разброс: ${c.spread_cv})</span>
+    <div class="meter"><i style="width:${c.score*100}%;background:${col}"></i></div>`;
+  const maxC = Math.max(...d.stages.flatMap(s => [s.internal_cost, s.contractor_cost]));
+  $('stages').innerHTML = `<table><tr><th>Этап</th><th class="n">Часы</th><th class="n">Внутри</th><th class="n">Подрядчик (ставка)</th><th></th></tr>` +
+    d.stages.map(s => `<tr><td>${esc(s.name)}</td><td class="n">${s.hours}</td><td class="n">${rub(s.internal_cost)}</td>
+      <td class="n">${rub(s.contractor_cost)} <span class="mu small">(${s.contractor_rate} ₽/ч)</span></td>
+      <td style="width:22%"><span class="bar" style="width:${s.internal_cost/maxC*100}%;background:var(--in)"></span><br><span class="bar" style="width:${s.contractor_cost/maxC*100}%;background:var(--co)"></span></td></tr>`).join('') + '</table>' +
+    '<div class="small mu" style="margin-top:6px">Стоимость в таблице без резерва на риски, координации и доп. расходов; итог выше их включает.</div>';
+  $('analogs').innerHTML = d.analogs.length ? `<table><tr><th>CR</th><th>Задача</th><th class="n">Сходство</th><th class="n">Часы</th><th class="n">Календарных дней</th></tr>` +
+    d.analogs.map(a => `<tr><td>${esc(a.cr)}</td><td>${esc(a.title)}</td><td class="n">${a.similarity}</td><td class="n">${a.hours}</td><td class="n">${a.calendar_days ?? '—'}</td></tr>`).join('') + '</table>'
+    : '<span class="mu">Похожих изменений не найдено — использована базовая оценка.</span>';
+  $('assum').innerHTML = d.assumptions.map(x => `<li>${esc(x)}</li>`).join('');
+  $('risks').innerHTML = d.risks.map(x => `<li>${esc(x)}</li>`).join('');
+  $('out').scrollIntoView({behavior:'smooth'});
+}
+init();
+</script>
+</body>
+</html>
