@@ -132,11 +132,31 @@ def build_market() -> list[dict]:
         ("Аутсорс-компания", 1.0), ("Крупный вендор", 1.5),
     ], 1):
         for st, base in RATE_BASE.items():
+            rate = round(base * factor * rnd.uniform(0.95, 1.05) / 50) * 50
             rows.append({
                 "source_id": f"SRC{i:02d}", "company_type": kind, "stack": "Python/Web",
-                "stage": st, "rate_rub_hour": round(base * factor * rnd.uniform(0.95, 1.05) / 50) * 50,
+                "stage": st, "rate_rub_hour": rate,
                 "year": 2026, "note": "демо-данные: заменить ссылкой на открытый прайс",
             })
+    # соседние стеки (для проверки нормализации по стеку): база - SRC06 (аутсорс x1.0)
+    base_rows = [r for r in rows if r["source_id"] == "SRC06"]
+    for i, (stack, mult) in enumerate([("1C", 1.15), ("Java/Enterprise", 1.2), ("Mobile", 1.1)], start=9):
+        for r in base_rows:
+            n = dict(r)
+            n["source_id"] = f"SRC{i:02d}"
+            n["stack"] = stack
+            # базовая ставка источника (без множителя стека) + шум выборки: медиана выборки
+            # восстанавливает множитель из config.STACK_MULTIPLIERS при нормализации select_market
+            n["rate_rub_hour"] = round(float(r["rate_rub_hour"]) * mult * rnd.uniform(0.85, 1.15) / 50) * 50
+            rows.append(n)
+    # устаревший прайс и битая строка - должны отсеиваться загрузчиком (как в реальных данных)
+    for r in rows[:8]:
+        old = dict(r); old.update({"source_id": "SRC00", "year": 2022,
+                                   "note": "демо: устаревший прайс (отсекается фильтром года)"})
+        rows.append(old)
+    rows.append({"source_id": "", "company_type": "Студия веб-разработки", "stack": "Python/Web",
+                 "stage": "backend", "rate_rub_hour": 0, "year": 2026,
+                 "note": "демо: битая строка (отсекается проверкой качества)"})
     return rows
 
 
