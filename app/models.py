@@ -21,4 +21,14 @@ class EstimateRequest(BaseModel):
     contractor_mobilization_days: int = Field(default=c.DEFAULTS["contractor_mobilization_days"], ge=0, le=365)
     contractor_efficiency: float = Field(default=c.DEFAULTS["contractor_efficiency"], ge=0.3, le=1.5)
     coordination_pct: float = Field(default=c.DEFAULTS["coordination_pct"], ge=0, le=100)
+    # ---- рыночная оценка: нормализация условий сравнения ----
+    stack: str = Field(default=c.MARKET_STACKS[0], description="Стек задачи (для приведения ставок рынка)")
+    company_type_profile: str = Field(default="Аутсорс-компания",
+                                      description="Профиль подрядчика, к которому приводятся ставки источников")
+    company_types: list[str] = Field(default_factory=list, max_length=8,
+                                     description="Фильтр типов подрядчиков в выборке (пусто = все)")
+    market_year: int | None = Field(default=None, ge=2000, le=2100,
+                                    description="Год прайсов (пусто = самый свежий в данных)")
+    market_index_pct: float = Field(default=100.0, ge=50, le=200,
+                                    description="Индекс рынка, % (100 = без корректировки)")
     extra_costs: list[ExtraCost] = Field(default_factory=list, max_length=20)
